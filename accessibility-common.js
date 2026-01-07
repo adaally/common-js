@@ -14,7 +14,7 @@
  *                                              within the container. If not provided, it will be
  *                                              automatically computed.
  */
-function trapFocusAlly(container, openBtn, closeBtnSelector, focusableElements) {
+function focusTrapAlly(container, openBtn, closeBtnSelector, focusableElements) {
     let focusables = focusableElements || getFocusableElementsAlly(container);
     if (!focusables.length) return;
 
