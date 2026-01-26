@@ -76,3 +76,96 @@ function getFocusableElementsAlly(container) {
         `)
     );
 }
+
+
+
+/**
+* Sets up ARIA list semantics
+ *
+ * @param {HTMLElement} container - The slider/carousel container element.
+ * @param {string} itemClass - The class selector for individual slide items.
+ */
+function addListSemantics(container, itemClass) {
+    container.setAttribute('role', 'list');
+    container.querySelectorAll(itemClass).forEach(item => {
+        item.setAttribute('role', 'listitem');
+    });
+}
+
+
+/**
+ * Sets up ARIA slider semantics for a carousel/slider component.
+ * - Assigns role="region" to the container.
+ *
+ * @param {HTMLElement} container - The slider/carousel container element.
+ * @param {string} itemClass - The class selector for individual slide items.
+ * @param {string} [titleSelector] - Optional selector for the title element associated with the slider.
+ * @param {HTMLElement} [titleElement] - Optional title element associated with the slider.
+ */
+function addSliderSemantics(container, itemClass, titleSelector, titleElement) {
+    if (!container) return;
+    container.setAttribute('role', 'region');
+
+    const addIdToTitleIfRequired = (title) => {
+        if (title.id) return;
+        title.id = `slider_title_${Math.random().toString(16).slice(2)}`;
+    };
+
+    if (titleSelector) {
+        //If the title is not passed, we try to find a title. The class .container is common on this website, it might vary on other websites
+        const containerCarousel = container.closest('.container');
+        const title = containerCarousel.querySelector(titleSelector);
+        if (title) {
+            addIdToTitleIfRequired(title);
+            container.setAttribute('aria-labelledby', title.id);
+        }
+    } else {
+        //If there's an existing titleElement passed
+        addIdToTitleIfRequired(titleElement);
+        container.setAttribute('aria-labelledby', titleElement.id)
+    }
+
+    const items = container.querySelectorAll(itemClass);
+    items.forEach((item, index) => {
+        item.setAttribute('role', 'group');
+        item.setAttribute('aria-label', `Slide ${index + 1} of ${items.length}`);
+    });
+}
+
+
+/**
+ * Toggles visibility of interactive elements within slide items for accessibility.
+ *
+ * @param {HTMLElement} slideItem - The individual slide item element.
+ * @param {boolean} isVisible - Whether the slide item is visible or not.
+ */
+function toggleElementsVisibility(slideItem, isVisible) {
+    const isElementVisible = slideItem.classList.contains('is-selected');
+    const actualItemVisibility = isVisible && isElementVisible;
+    slideItem.querySelectorAll('a, input, button, select, textarea, [tabindex]').forEach(focusable => {
+        focusable.setAttribute('aria-hidden', actualItemVisibility ? 'false' : 'true');
+        focusable.setAttribute('tabindex', actualItemVisibility ? '0' : '-1');
+        listenImageLazyLoad(slideItem, actualItemVisibility)
+    });
+}
+
+/**
+ * Adds an ARIA description to an element by setting the aria-describedby attribute.
+ *
+ * @param {HTMLElement} element - The element to which the description will be added.
+ * @param {string} descriptionId - The ID of the element that contains the description text.
+ */
+function setAriaDescribedBy(element, descriptionId) {
+    if (!element || !descriptionId) return;
+    const existingDescribedBy = element.getAttribute('aria-describedby');
+    const describedByIds = existingDescribedBy ? existingDescribedBy.split(' ') : [];
+    if (!describedByIds.includes(descriptionId)) {
+        describedByIds.push(descriptionId);
+        element.setAttribute('aria-describedby', describedByIds.join(' '));
+    }
+}
+
+function removeAllNoScript() {
+    document.querySelectorAll('noscript').forEach(ns => ns.remove());
+}
+removeAllNoScript();
