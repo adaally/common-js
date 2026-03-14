@@ -1113,3 +1113,100 @@ function groupAccordionsAndAddListSemantics() {
 
 
 /** ------------------------------------------------- END OF Product Page single accordion widget fixes ------------------------------------------------- */
+
+
+
+/** 
+ * Predictive search modal fix
+ * Adds dynamic focus trap
+*/
+function addFocusTrapAndArrowThroughItems() {
+    const searchBtn = document.querySelector('.header__button--search')
+    searchBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchBtn.click();
+      }
+    });
+    searchBtn.addEventListener('click', () => applyListeners(searchBtn));
+
+    const inputs = document.querySelectorAll('search-input input[type="search"]');
+    const clearBtns = document.querySelectorAll('.search-input__clear-button');
+    const onEmpty = (clearBtn, isHidden) => {
+      clearBtn.setAttribute('tabindex', isHidden ? '-1' : '0');
+      clearBtn.setAttribute('aria-hidden', String(!isHidden));
+    };
+
+    inputs.forEach((input, index) => {
+      onEmpty(clearBtns[index], input.value.trim() === '');
+      input.addEventListener('input', () => {
+        onEmpty(clearBtns[index], input.value.trim() === '');
+      });
+    });
+
+    function applyListeners(searchBtn) {
+      setTimeout(() => {
+        const modal = document.querySelector('dialog[open]');
+        trapFocus(modal.querySelector('.drawer-header'), searchBtn);
+        const input = modal.querySelector(".search-form search-input input[type='search']");
+
+        const list = modal.querySelector("predictive-search-drawer");
+        let items = [];
+
+        // --- Watch for new items being added to the container ---
+        const observer = new MutationObserver(() => {
+          items = Array.from(modal.querySelectorAll(".drawer-content a, .predictive-search-drawer__footer-content a"));
+          if (items.length) {
+            items.forEach(item => item.setAttribute("tabindex", "-1"));
+          }
+        });
+
+        observer.observe(list, { childList: true, subtree: true });
+
+        // --- START: ArrowDown from input moves to first item ---
+        input.addEventListener("keydown", e => {
+          if (items.length <= 1) return;
+
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setTimeout(() => {
+              items[0].focus();
+            }, 100);
+          }
+        });
+        // --- END ---
+
+
+        // --- Keyboard navigation inside results ---
+        list.addEventListener("keydown", e => {
+          const current = document.activeElement;
+          const idx = items.indexOf(current);
+          if (idx === -1) return;
+
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            const next = items[idx + 1] || items[0];
+            next.focus();
+          }
+
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (idx === 0) {
+              input.focus();
+            } else {
+              items[idx - 1].focus();
+            }
+          }
+
+          if (e.key === "Escape") {
+            input.focus();
+          }
+
+          if (e.key === "Tab") {
+            e.preventDefault();
+            input.focus();
+          }
+        });
+      }, 300);
+    }
+  }
