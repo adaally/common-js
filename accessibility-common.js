@@ -1210,3 +1210,268 @@ function addFocusTrapAndArrowThroughItems() {
       }, 300);
     }
   }
+/** ------------------------------------------------- END OF Predictive search modal ------------------------------------------------- */
+
+/*
+** Judge.me carousel
+*/
+function fixJudgeMeCarousel() {
+    const ROOT_SEL = '.jdgm-carousel-wrapper';
+    const parentContainer = document.querySelector(ROOT_SEL);
+    if (!parentContainer) return;
+    const ratingParent = parentContainer.querySelector('.jdgm-all-reviews-rating');
+    if (ratingParent) {
+        ratingParent.removeAttribute('tabindex');
+        ratingParent.setAttribute('aria-label', `${ratingParent.getAttribute('data-score')} out of 5 stars`);
+    }
+    const invisibleAlert = document.querySelector('#invisible-alert');
+
+    parentContainer.addEventListener('focusout', (e) => {
+        if (!parentContainer.contains(e.relatedTarget)) {
+            invisibleAlert.setAttribute('aria-hidden', 'true');
+            invisibleAlert.innerHTML = '';
+
+        }
+    });
+    parentContainer.querySelectorAll('.jdgm-carousel__arrows .jdgm-carousel__left-arrow, .jdgm-carousel__arrows .jdgm-carousel__right-arrow').forEach((btn, index) => {
+        btn.setAttribute('role', 'button');
+        if (index === 0) {
+            btn.setAttribute('aria-label', 'Previous review');
+        } else {
+            btn.setAttribute('aria-label', 'Next review');
+        }
+    })
+
+    // ------------   Toggle visibility attributes for active items   ----------
+
+    const wrapper = document.querySelector('.jdgm-carousel-wrapper');
+    if (!wrapper) return;
+
+    const viewport = wrapper.querySelector('.jdgm-carousel__item-container');
+    const track = wrapper.querySelector('.jdgm-carousel__item-wrapper');
+    if (!viewport || !track) return;
+    const FOCUSABLE = 'a[href]:not(.jdgm-carousel-item__product)';
+    const VISIBLE_RATIO = 0.6;
+
+    const qAll = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+    function setSlideFocusable(slide, visible) {
+        const links = qAll(FOCUSABLE, slide);
+        if (visible) {
+            links.forEach(a => a.removeAttribute('tabindex'));
+            slide.setAttribute('aria-hidden', 'false');
+        } else {
+            links.forEach(a => a.tabIndex = -1);
+            slide.setAttribute('aria-hidden', 'true');
+        }
+    }
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const togleBtn = document.querySelector('.jdgm-carousel-toggle');
+                setTimeout(() => {
+                    if (togleBtn.getAttribute('aria-label') !== 'Resume carousel autoplay') return;
+                    const allItems = track.querySelectorAll('.jdgm-carousel-item');
+                    const items = Array.from(allItems).filter(item => item.getAttribute('aria-hidden') !== 'true');
+                    if (items.length > 0) {
+                        if (items.length > 1) {
+                            const middleOne = items[Math.floor(items.length / 2)];
+                            if (middleOne) {
+                                const next = middleOne.nextElementSibling;
+                                invisibleAlert.removeAttribute('aria-hidden');
+                                invisibleAlert.innerHTML = middleOne.querySelector('.jdgm-carousel-item__review-content').innerHTML;
+                            }
+                        } else if (items.length === 1) {
+                            invisibleAlert.removeAttribute('aria-hidden');
+
+                            invisibleAlert.innerHTML = items[0].querySelector('.jdgm-carousel-item__review-content').innerHTML;
+                        }
+
+                    }
+                }, 400);
+
+            }
+        });
+    });
+
+    // Start observing the target
+    observer.observe(track, {
+        attributes: true,
+        attributeFilter: ['style'],
+    });
+
+    // Observe each slide's visibility within the carousel viewport
+    const io = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            setSlideFocusable(entry.target, entry.intersectionRatio >= VISIBLE_RATIO);
+        }
+    }, { root: viewport, threshold: [0, 0.25, VISIBLE_RATIO, 0.75, 1] });
+
+    // Start observing existing slides
+    function observeAllSlides() {
+        qAll('.jdgm-carousel-item', track).forEach(slide => io.observe(slide));
+    }
+    observeAllSlides();
+
+    // If slides get added later, observe them too
+    const mo = new MutationObserver((muts) => {
+        muts.forEach(m => {
+            m.addedNodes.forEach(n => {
+                if (n.nodeType === 1) {
+                    if (n.matches?.('.jdgm-carousel-item')) io.observe(n);
+                    n.querySelectorAll?.('.jdgm-carousel-item').forEach(el => io.observe(el));
+                }
+            });
+        });
+    });
+    mo.observe(track, { childList: true, subtree: true });
+
+    // Initial pass (before IntersectionObserver fires)
+    const vRect = viewport.getBoundingClientRect();
+
+    const carouselItems = qAll('.jdgm-carousel-item', track);
+    carouselItems.forEach((slide, index) => {
+        const r = slide.getBoundingClientRect();
+        const overlapX = Math.max(0, Math.min(r.right, vRect.right) - Math.max(r.left, vRect.left));
+        const ratio = r.width ? overlapX / r.width : 0;
+        setSlideFocusable(slide, ratio >= VISIBLE_RATIO);
+
+        slide.setAttribute('role', 'group');
+        slide.setAttribute('aria-label', `Review ${index + 1} of ${carouselItems.length}`);
+    });
+
+
+    parentContainer.querySelectorAll('.jdgm-carousel-item').forEach(item => {
+        // const img = item.querySelector('.jdgm-carousel-item__product-image');
+        // img.setAttribute('alt', '');
+        const title = item.querySelector('.jdgm-carousel-item__product-title');
+        title.setAttribute('aria-hidden', 'true');
+
+        const productLink = item.querySelector('.jdgm-carousel-item__product');
+        if (productLink) {
+            productLink.setAttribute('tabindex', '-1');
+            productLink.setAttribute('aria-hidden', 'true');
+        }
+
+        const ratingImg = item.querySelector('.jdgm-carousel-item__review-rating');
+        if (ratingImg) {
+            ratingImg.removeAttribute('tabindex');
+            const aria = ratingImg.getAttribute('aria-label');
+            const number = parseInt(aria.replace(/\D+/g, ''), 10);
+            ratingImg.setAttribute('aria-label', `${number} out of 5 stars`);
+        }
+    });
+
+    // ------------   Pause and play carousel   ----------
+    const E_HOVER_IN = ['mouseenter', 'mouseover'];
+    const E_HOVER_OUT = ['mouseleave', 'mouseout'];
+    const ALL_HOVER = [...E_HOVER_IN, ...E_HOVER_OUT];
+
+    function $(sel, root = document) { return root.querySelector(sel); }
+
+    function whenReady(cb) {
+        const tryStart = () => {
+            const root = $(ROOT_SEL);
+            if (root && root.querySelector('.jdgm-carousel__item-wrapper')) {
+                cb(root);
+                console.log(root.querySelector('.jdgm-carousel__item-wrapper'), 'root')
+                return true;
+            }
+            return false;
+        };
+        if (tryStart()) return;
+        const mo = new MutationObserver(() => { if (tryStart()) mo.disconnect(); });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    // Dispatch hover-like events to multiple probable nodes
+    function emit(root, names) {
+        const targets = [
+            root,
+            root.querySelector('.jdgm-carousel'),
+            root.querySelector('.jdgm-carousel__item-container'),
+            root.querySelector('.jdgm-carousel__item-wrapper')
+        ].filter(Boolean);
+
+        for (const t of targets) {
+            for (const name of names) {
+                const bubbles = name === 'mouseover' || name === 'mouseout';
+                const evt = new MouseEvent(name, { bubbles, cancelable: true });
+                t.dispatchEvent(evt); // isTrusted === false (synthetic)
+            }
+        }
+    }
+
+    whenReady((root) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'jdgm-carousel-toggle toggle-flicky-btn';
+        btn.setAttribute('aria-label', 'Pause carousel autoplay');
+
+        (root).prepend(btn);
+
+        let paused = false;
+
+        // Block *real* hover events while paused, but allow synthetic ones
+        const blocker = (e) => {
+            if (!paused) return;
+            if (e.isTrusted) { // real mouse event: swallow it
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }
+        };
+        const addBlockers = () => ALL_HOVER.forEach(n => root.addEventListener(n, blocker, true));
+        const removeBlockers = () => ALL_HOVER.forEach(n => root.removeEventListener(n, blocker, true));
+
+        function updateUI() {
+            const ICONS = {
+                play: `
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
+                    <path d="M8 5v14l11-7-11-7z"></path>
+                    </svg>`,
+                pause: `
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
+                    <path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>
+                    </svg>`
+            };
+
+            btn.innerHTML = paused ? ICONS.play : ICONS.pause;
+            btn.setAttribute('aria-label', paused ? 'Resume carousel autoplay' : 'Pause carousel autoplay');
+            root.classList.toggle('is-paused-by-button', paused);
+            const invisibleAlertSecond = document.querySelector('#invisible-alert');
+            if (paused) {
+                invisibleAlertSecond.removeAttribute('aria-hidden');
+            } else {
+                invisibleAlertSecond.setAttribute('aria-hidden', 'true');
+                invisibleAlertSecond.innerHTML = '';
+            }
+        }
+
+        function pause() {
+            paused = true;
+            addBlockers();
+            emit(root, E_HOVER_IN);
+            updateUI();
+        }
+
+        function play() {
+            paused = false;
+            removeBlockers();
+            emit(root, E_HOVER_OUT);
+            updateUI();
+        }
+
+        btn.addEventListener('click', () => (paused ? play() : pause()));
+        btn.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                paused ? play() : pause();
+            }
+        });
+
+        // start in playing state
+        updateUI();
+
+    });
+}
+    /** ------------------------------------------------- END OF Judge.me carousel  ------------------------------------------------- */
