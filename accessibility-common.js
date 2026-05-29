@@ -174,137 +174,192 @@ removeAllNoScript();
 /**
  * JUDG.ME WIDGET FIXES
  */
-function fixReviews() {
-    if (!window.location.pathname.includes('/products')) return;
-    const container = document.querySelector('.jdgm-rev-widg');
+    function fixReviews() {
+        if (!window.location.pathname.includes('/products')) return;
+        const container = document.querySelector('.jdgm-rev-widg');
 
-    if (!container) return;
+        if (!container) return;
 
-    const updateReviewList = () => {
-        const reviewsSection = container.querySelector('.jdgm-rev-widg__reviews');
-        reviewsSection.querySelectorAll('.jdgm-rev').forEach(review => {
-            fixReviewItem(review);
-        });
-    };
-
-    const bodyreviews = document.querySelector('.jdgm-rev-widg__body');
-    if (bodyreviews) {
-        new MutationObserver(() => {
-            updateReviewList();
-        }).observe(bodyreviews, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    fixBadges(container);
-    fixRatingSection(container);
-    fixAverage(container);
-    updateReviewList();
-    fixCountdown(container);
-    fixEmailValidationMessage(container);
-    fixNotificationAlert(container);
-    focusFirstErrorOnSubmit(container);
-    fixAskQuestionForm(container);
-    tabListToReviewsQuestions(container);
-    paginationSemantics(container);
-    fixQuestionsSection(container);
-    focusStarFirst(container);
-
-    function focusStarFirst(container) {
-        const observerReviewBtn = new MutationObserver(() => {
-            const reviewBtn = container.querySelector('.jdgm-write-rev-link');
-            if (reviewBtn) {
-                reviewBtn.addEventListener('click', () => {
-                    setTimeout(() => {
-                        const stars = container.querySelectorAll('.jdgm-form__fieldset a.jdgm-star');
-                        if (stars.length > 0) {
-                            stars[0].focus()
-                        }
-                    }, 200);
-                });
-
-                reviewBtn.addEventListener('click', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        reviewBtn.click();
-                    }
-                })
-
-                observerReviewBtn.disconnect();
-            }
-        });
-
-        observerReviewBtn.observe(container, {
-            subtree: true,
-            childList: true
-        })
-    }
-
-    function paginationSemantics(container) {
-        const observe = (paginationObserver) => {
-            paginationObserver.observe(container, {
-                subtree: true,
-                childList: true
+        const updateReviewList = () => {
+            const reviewsSection = container.querySelector('.jdgm-rev-widg__reviews');
+            reviewsSection.querySelectorAll('.jdgm-rev').forEach(review => {
+                fixReviewItem(review);
             });
         };
 
-        const paginationObserver = new MutationObserver(() => {
-            const pagination = container.querySelector('.jdgm-paginate');
-            if (!pagination) return;
-            paginationObserver.disconnect();
-            pagination.setAttribute('role', 'navigation');
-            pagination.setAttribute('aria-label', 'Pagination');
-            const pages = pagination.querySelectorAll(
-                '.jdgm-paginate__page:not(.jdgm-paginate__next-page):not(.jdgm-paginate__last-page)'
-            );
-            pages.forEach(page => {
-                page.setAttribute('aria-current', page.classList.contains('jdgm-curt'));
-                page.addEventListener('click', () => observe(paginationObserver));
-                page.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') observe(paginationObserver);
-                });
+        const bodyreviews = document.querySelector('.jdgm-rev-widg__body');
+        if(bodyreviews) {
+            new MutationObserver(() => {
+                updateReviewList();
+            }).observe(bodyreviews, {
+                childList: true,
+                subtree: true
             });
+        }
 
-            pagination.querySelectorAll('.jdgm-paginate__next-page, .jdgm-paginate__prev-page').forEach(page => {
-                page.setAttribute('tabindex', '-1');
-                page.setAttribute('aria-hidden', 'true');
-            });
-        })
+        fixBadges(container);
+        fixRatingSection(container);
+        fixAverage(container);
+        updateReviewList();
+        fixCountdown(container);
+        fixEmailValidationMessage(container);
+        fixNotificationAlert(container);
+        focusFirstErrorOnSubmit(container);
+        fixAskQuestionForm(container);
+        tabListToReviewsQuestions(container);
+        paginationSemantics(container);
+        fixQuestionsSection(container);
+        focusStarFirst(container);
+        setAnnouncementToSuccessSubmissionMessage(container);
+        fixRatingError(container);
 
-        observe(paginationObserver);
-    }
-
-    function tabListToReviewsQuestions(container) {
-        const tabsObserver = new MutationObserver(() => {
-            const tabsContainer = container.querySelector('.jdgm-subtab');
-            if (!tabsContainer) return;
-            const tabs = Array.from(tabsContainer.querySelectorAll('.jdgm-subtab__name'));
-
-            // Add tablist role
-            tabsContainer.setAttribute('role', 'tablist');
-
-            tabs.forEach((tab, index) => {
-                tab.setAttribute('role', 'tab');
-
-                const isActive = tab.classList.contains('jdgm--active');
-
-                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                tab.tabIndex = isActive ? 0 : -1;
-
-                // Assign an ID if none exists (required for tabpanel linking)
-                if (!tab.id) tab.id = `jdgm-tab-${index}`;
-
-                // Create aria-controls if missing (safe fallback)
-                if (!tab.hasAttribute('aria-controls')) {
-                    tab.setAttribute('aria-controls', `jdgm-tabpanel-${index}`);
+        function fixRatingError(container) {
+            const errorObserver = new MutationObserver(() => {
+                const scoreError = container.querySelector('#score-error');
+                
+                if (scoreError) {
+                    const fieldset = scoreError.closest('.jdgm-form__rating-fieldset');
+                    if (fieldset && !fieldset.hasAttribute('aria-applied')) {
+                        fieldset.setAttribute('aria-applied', 'true');
+                        fieldset.querySelectorAll('.jdgm-star').forEach(star => {
+                            star.setAttribute('aria-describedby', scoreError.id);
+                        });
+                    }
+                    // No need to keep observing once found and fixed
+                    errorObserver.disconnect();
                 }
+            });
 
-                // Handle click activation
-                tab.addEventListener('click', () => activateTab(tab));
+            errorObserver.observe(container, {
+                childList: true,
+                subtree: true
+            });
+        }
 
-                // Keyboard navigation
-                tab.addEventListener('keydown', e => {
+        function setAnnouncementToSuccessSubmissionMessage(container) {
+            const observer = new MutationObserver(() => {
+                const message = document.querySelector('.jdgm-notification');
+                if(message) {
+                    message.setAttribute('role', 'alert');
+                    observer.disconnect();
+                }
+            });
+
+            observer.observe(container, {
+                childList: true,
+                subtree: true
+            })
+        }
+
+        function focusStarFirst(container) {
+            const observerReviewBtn = new MutationObserver(() => {
+                const reviewBtn = container.querySelector('.jdgm-write-rev-link');
+                if(reviewBtn) {
+                    reviewBtn.addEventListener('click', () => {
+                        if(reviewBtn.getAttribute('aria-expanded') === 'false') {
+
+                            //related to fixCountdown()
+                            const select = container.querySelector('.jdgm-form__reviewer-name-format-dropdown');
+                            if (select) {
+                                select.removeAttribute('data-focus-set');
+                            }
+                        }
+
+
+                        setTimeout(() => {
+                            const stars = container.querySelectorAll('.jdgm-form__fieldset a.jdgm-star');
+                            if(stars.length > 0) {
+                                stars[0].focus()
+                            }
+                        }, 200);
+                    });
+
+                    reviewBtn.addEventListener('click', (e) => {
+                        if(e.key === 'Enter') {
+                            e.preventDefault();
+                            reviewBtn.click();
+                        }
+                    })
+
+                observerReviewBtn.disconnect();
+                }
+            });
+
+            observerReviewBtn.observe(container, {
+                subtree: true,
+                childList: true
+            })
+        }
+
+        function paginationSemantics(container) {
+            const observe = (paginationObserver) => {
+                paginationObserver.observe(container, {
+                    subtree: true,
+                    childList: true
+                });
+            };
+            
+            const paginationObserver = new MutationObserver(() => {
+                const pagination = container.querySelector('.jdgm-paginate');
+                if(!pagination) return;
+
+                const lastPage = pagination.querySelector('.jdgm-paginate__last-page')
+                paginationObserver.disconnect();
+                pagination.setAttribute('role', 'navigation');
+                pagination.setAttribute('aria-label', 'Pagination');
+                const pages = pagination.querySelectorAll(
+                '.jdgm-paginate__page:not(.jdgm-paginate__next-page):not(.jdgm-paginate__last-page)'
+                );
+
+                let linkLabel = lastPage ? `of ${lastPage.getAttribute('data-page')}` : '';
+                pages.forEach(page => {
+                    page.setAttribute('aria-current', page.classList.contains('jdgm-curt'));
+                    page.setAttribute('aria-label', `Page ${page.getAttribute('data-page')} ${linkLabel}`);
+                    page.addEventListener('click', () => observe(paginationObserver));
+                    page.addEventListener('keydown', (e) => {
+                        if(e.key === 'Enter') observe(paginationObserver);
+                    });
+                });
+
+                pagination.querySelectorAll('.jdgm-paginate__next-page, .jdgm-paginate__prev-page').forEach(page => {
+                    page.setAttribute('tabindex', '-1');
+                    page.setAttribute('aria-hidden', 'true');
+                });
+            })
+
+            observe(paginationObserver);
+        }
+
+        function tabListToReviewsQuestions(container) {
+            const tabsObserver = new MutationObserver(() => {
+                const tabsContainer = container.querySelector('.jdgm-subtab');
+                if(!tabsContainer) return;
+                const tabs = Array.from(tabsContainer.querySelectorAll('.jdgm-subtab__name'));
+
+                // Add tablist role
+                tabsContainer.setAttribute('role', 'tablist');
+
+                tabs.forEach((tab, index) => {
+                    tab.setAttribute('role', 'tab');
+
+                    const isActive = tab.classList.contains('jdgm--active');
+
+                    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    tab.tabIndex = isActive ? 0 : -1;
+
+                    // Assign an ID if none exists (required for tabpanel linking)
+                    if (!tab.id) tab.id = `jdgm-tab-${index}`;
+
+                    // Create aria-controls if missing (safe fallback)
+                    if (!tab.hasAttribute('aria-controls')) {
+                    tab.setAttribute('aria-controls', `jdgm-tabpanel-${index}`);
+                    }
+
+                    // Handle click activation
+                    tab.addEventListener('click', () => activateTab(tab));
+
+                    // Keyboard navigation
+                    tab.addEventListener('keydown', e => {
                     const curr = tabs.indexOf(tab);
                     let next = null;
 
@@ -324,156 +379,195 @@ function fixReviews() {
                         e.preventDefault();
                         next.focus();
                     }
+                    });
                 });
-            });
 
-            function activateTab(selected) {
-                tabs.forEach(tab => {
+                function activateTab(selected) {
+                    tabs.forEach(tab => {
                     const isSelected = tab === selected;
                     tab.classList.toggle('jdgm--active', isSelected);
                     tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
                     tab.tabIndex = isSelected ? 0 : -1;
+                    });
+                }
+
+                tabsObserver.disconnect();
+            });
+
+            tabsObserver.observe(container, {
+                subtree: true,
+                childList: true
+            })
+        }
+
+        function fixReviewItem(item) {
+            item.setAttribute('role', 'group');
+            const reviewId = item.getAttribute('data-review-id');
+            const userContainer = item.querySelector('.jdgm-rev__author-wrapper');
+            userContainer.id = reviewId;
+            item.setAttribute('aria-labelledby', userContainer.id);
+            const icon = item.querySelector('.jdgm-rev__icon');
+            if (icon) {
+                icon.setAttribute('aria-hidden', 'true');
+            }
+
+            const rating = item.querySelector('.jdgm-rev__rating');
+            if (rating) {
+                const value = rating.getAttribute('data-score');
+                rating.setAttribute('aria-label', `${value} out of 5 stars`);
+                rating.removeAttribute('tabindex');
+            }
+
+            listenToThumbsUp(item);
+
+            function listenToThumbsUp(item) {
+                const observer = new MutationObserver(() => {
+                    const voteContainer = item.querySelector('.jdgm-rev__votes-inner');
+                    if (voteContainer) {
+                        const username = userContainer.querySelector('.jdgm-rev__author').innerText;
+                        const voteNumbers = voteContainer.querySelectorAll('.jdgm-rev__thumb-count');
+                        voteContainer.querySelectorAll('.jdgm-rev__thumb-btn').forEach((voteBtn, index) => {
+                            voteBtn.setAttribute('role', 'button');
+                            voteBtn.removeAttribute('title');
+                            voteNumbers[index].id = `vote_${index}_${reviewId}`;
+
+                            const isPositive = voteBtn.classList.contains('jdgm-rev_thumb-up');
+                            voteBtn.setAttribute('aria-label', `${username}'s review ${isPositive ? 'was' : 'was not'} helpful`);
+                            voteBtn.setAttribute('aria-describedby', voteNumbers[index].id);
+
+                            const oldValue = voteNumbers[index].innerText;
+
+                            const verifyPress = () => {
+                                setTimeout(() => {
+                                    const newValue = voteNumbers[index].innerText;
+                                    if (newValue !== oldValue) {
+                                        voteBtn.setAttribute('aria-pressed', 'true');
+                                    }
+                                }, 500);
+
+                            }
+                            voteBtn.addEventListener('click', verifyPress);
+                            voteBtn.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    verifyPress();
+                                }
+                            });
+                        });
+
+                        observer.disconnect();
+                    }
+                });
+
+                observer.observe(item, {
+                    subtree: true,
+                    childList: true
                 });
             }
 
-            tabsObserver.disconnect();
-        });
 
-        tabsObserver.observe(container, {
-            subtree: true,
-            childList: true
-        })
-    }
-
-    function fixReviewItem(item) {
-        item.setAttribute('role', 'group');
-        const reviewId = item.getAttribute('data-review-id');
-        const userContainer = item.querySelector('.jdgm-rev__author-wrapper');
-        userContainer.id = reviewId;
-        item.setAttribute('aria-labelledby', userContainer.id);
-        const icon = item.querySelector('.jdgm-rev__icon');
-        if (icon) {
-            icon.setAttribute('aria-hidden', 'true');
         }
 
-        const rating = item.querySelector('.jdgm-rev__rating');
-        if (rating) {
-            const value = rating.getAttribute('data-score');
-            rating.setAttribute('aria-label', `${value} out of 5 stars`);
-            rating.removeAttribute('tabindex');
-        }
+        function fixRatingSection(container) {
+            const list = container.querySelector('.jdgm-histogram');
+            if (!list) return;
+            
+            list.setAttribute('role', 'list');
+            list.setAttribute('aria-label', 'Ratings Distribution');
 
-        listenToThumbsUp(item);
+            const totalReviews = container.querySelector('.jdgm-rev-widg__summary-text');
 
-        function listenToThumbsUp(item) {
-            const observer = new MutationObserver(() => {
-                const voteContainer = item.querySelector('.jdgm-rev__votes-inner');
-                if (voteContainer) {
-                    const username = userContainer.querySelector('.jdgm-rev__author').innerText;
-                    const voteNumbers = voteContainer.querySelectorAll('.jdgm-rev__thumb-count');
-                    voteContainer.querySelectorAll('.jdgm-rev__thumb-btn').forEach((voteBtn, index) => {
-                        voteBtn.setAttribute('role', 'button');
-                        voteBtn.removeAttribute('title');
-                        voteNumbers[index].id = `vote_${index}_${reviewId}`;
-
-                        const isPositive = voteBtn.classList.contains('jdgm-rev_thumb-up');
-                        voteBtn.setAttribute('aria-label', `${username}'s review ${isPositive ? 'was' : 'was not'} helpful`);
-                        voteBtn.setAttribute('aria-describedby', voteNumbers[index].id);
-
-                        const oldValue = voteNumbers[index].innerText;
-
-                        const verifyPress = () => {
-                            setTimeout(() => {
-                                const newValue = voteNumbers[index].innerText;
-                                if (newValue !== oldValue) {
-                                    voteBtn.setAttribute('aria-pressed', 'true');
-                                }
-                            }, 500);
-
-                        }
-                        voteBtn.addEventListener('click', verifyPress);
-                        voteBtn.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') {
-                                verifyPress();
-                            }
-                        });
-                    });
-
-                    observer.disconnect();
-                }
-            });
-
-            observer.observe(item, {
-                subtree: true,
-                childList: true
-            });
-        }
-
-
-    }
-
-    function fixRatingSection(container) {
-        const list = container.querySelector('.jdgm-histogram');
-        if (!list) return;
-
-        list.setAttribute('role', 'list');
-        list.setAttribute('aria-label', 'Ratings Distribution');
-        list.querySelectorAll('.jdgm-histogram__row').forEach(row => {
-
-            if (!row.classList.contains('jdgm-histogram__clear-filter')) {
-                row.setAttribute('role', 'listitem');
-                row.querySelectorAll('.jdgm-histogram__bar, .jdgm-histogram__frequency').forEach(el => {
-                    el.setAttribute('aria-hidden', 'true');
-                })
-            } else {
-                row.setAttribute('role', 'button');
+            if(totalReviews) {
+                totalReviews.id = "summary_id_text";
             }
 
-        });
-    }
-
-    function fixBadges(container) {
-        const badgeContainer = container.querySelector('.jdgm-medals .jdgm-medals__container');
-        if (!badgeContainer) return;
-
-        badgeContainer.setAttribute('aria-label', 'Judge.me badges');
-        badgeContainer.setAttribute('role', 'list');
-        badgeContainer.querySelectorAll('.jdgm-medal-wrapper').forEach(badge => {
-            badge.setAttribute('role', 'listitem');
-            badge.removeAttribute('title');
-        })
-    }
-
-    function fixAverage(container) {
-        const average = container.querySelector('.jdgm-rev-widg__summary-stars');
-        if (!average) return;
-        average.removeAttribute('aria-label');
-        average.removeAttribute('role');
-        average.querySelectorAll('.jdgm-star').forEach(star => {
-            star.setAttribute('aria-hidden', 'true');
-        })
-    }
-
-    function fixCountdown(container) {
-        const formObserver = new MutationObserver(() => {
-            const formWrapper = container.querySelector('.jdgm-form-wrapper');
-            if (formWrapper && formWrapper.style.display !== 'none') {
-                const countdowns = formWrapper.querySelectorAll('.jdgm-countdown');
-
-                countdowns.forEach((countdown, index) => {
-                    if (countdown.hasAttribute('data-countdown-fixed')) return;
-                    countdown.setAttribute('data-countdown-fixed', 'true');
-                    countdown.id = `countdown_` + index;
-
-                    const formFieldContainer = countdown.closest('.jdgm-form__fieldset');
-                    if (formFieldContainer) {
-                        const field = formFieldContainer.querySelector('input, textarea');
-                        if (field) {
-                            field.setAttribute('aria-describedby', countdown.id);
-                        }
+            list.querySelectorAll('.jdgm-histogram__row').forEach(row => {
+                let barFrequencyText = '';
+                
+                const currentRatingText = row.getAttribute('data-rating') || 0;
+                if(!row.classList.contains('jdgm-histogram__clear-filter')) {
+                    row.setAttribute('role', 'listitem');
+                    row.querySelectorAll('.jdgm-histogram__percentage, .jdgm-histogram__frequency').forEach((el, index) => {
+                        barFrequencyText += el.innerText + (index === 0 ? ", " : " reviews.");
+                        el.setAttribute('aria-hidden', 'true');
+                    });
+                    const stars = row.querySelector('.jdgm-histogram__star');
+                    if(stars) {
+                        stars.setAttribute('aria-label', `${currentRatingText} out of 5 stars, ${barFrequencyText}`);
                     }
 
-                    const observer = new MutationObserver(() => {
+                    
+                }else {
+                    row.setAttribute('role','button');
+                }
+
+            });
+        }
+
+        function fixBadges(container) {
+            const badgeContainer = container.querySelector('.jdgm-medals .jdgm-medals__container');
+            if (!badgeContainer) return;
+
+            badgeContainer.setAttribute('aria-label', 'Judge.me badges');
+            badgeContainer.setAttribute('role', 'list');
+            badgeContainer.querySelectorAll('.jdgm-medal-wrapper').forEach(badge => {
+                badge.setAttribute('role', 'listitem');
+                badge.removeAttribute('title');
+            })
+        }
+
+        function fixAverage(container) {
+            const average = container.querySelector('.jdgm-rev-widg__summary-stars');
+            if(!average) return;
+            const currentName = average.getAttribute('aria-label');
+            if(currentName) {
+                average.setAttribute('aria-label', currentName + ' out of 5 stars.');
+            }
+            
+            average.querySelectorAll('.jdgm-star').forEach(star => {
+                star.setAttribute('aria-hidden', 'true');
+            })
+        }
+
+        function fixCountdown(container) {
+            const formObserver = new MutationObserver(() => {
+                const formWrapper = container.querySelector('.jdgm-form-wrapper');
+                if (formWrapper && formWrapper.style.display !== 'none') {
+                    const countdowns = formWrapper.querySelectorAll('.jdgm-countdown');
+
+                    const select = formWrapper.querySelector('.jdgm-form__reviewer-name-format-dropdown');
+                    if (select && !select.hasAttribute('data-focus-set')) {
+                        select.setAttribute('data-focus-set', 'true');
+                        setTimeout(() => select.focus(), 300);
+                    }
+
+                    countdowns.forEach((countdown, index) => {
+                        if (countdown.hasAttribute('data-countdown-fixed')) return;
+                        countdown.setAttribute('data-countdown-fixed', 'true');
+                        countdown.id = `countdown_`+index;
+
+                        const formFieldContainer = countdown.closest('.jdgm-form__fieldset');
+                        if(formFieldContainer) {
+                            const field = formFieldContainer.querySelector('input, textarea');
+                            if(field) {
+                                field.setAttribute('aria-describedby', countdown.id);
+                            }
+                        }
+
+                        const observer = new MutationObserver(() => {
+                            if (countdown.textContent.trim() && !countdown.querySelector('.visually-hidden')) {
+                                const hiddenSpan = document.createElement('span');
+                                hiddenSpan.className = 'visually-hidden';
+                                hiddenSpan.textContent = ' characters remaining';
+                                countdown.appendChild(hiddenSpan);
+                            }
+                        });
+
+                        observer.observe(countdown, {
+                            childList: true,
+                            characterData: true,
+                            subtree: true
+                        });
+
                         if (countdown.textContent.trim() && !countdown.querySelector('.visually-hidden')) {
                             const hiddenSpan = document.createElement('span');
                             hiddenSpan.className = 'visually-hidden';
@@ -481,346 +575,331 @@ function fixReviews() {
                             countdown.appendChild(hiddenSpan);
                         }
                     });
+                }
+            });
 
-                    observer.observe(countdown, {
-                        childList: true,
-                        characterData: true,
-                        subtree: true
-                    });
+            formObserver.observe(container, {
+                childList: true,
+                subtree: true
+            });
+        }
 
-                    if (countdown.textContent.trim() && !countdown.querySelector('.visually-hidden')) {
-                        const hiddenSpan = document.createElement('span');
-                        hiddenSpan.className = 'visually-hidden';
-                        hiddenSpan.textContent = ' characters remaining';
-                        countdown.appendChild(hiddenSpan);
+        function fixAskQuestionForm(container) {
+            const formObserver = new MutationObserver(() => {
+                const formWrapper = container.querySelector('.jdgm-question-form-wrapper');
+                if (formWrapper && formWrapper.style.display !== 'none') {
+                    const titleAskQuestion = container.querySelector('.jdgm-question-form-wrapper div.jdgm-form__title');
+                    if(titleAskQuestion) {
+                        const h3 = document.createElement('h3');
+                        h3.innerText = titleAskQuestion.innerText;
+                        h3.className = titleAskQuestion.className;
+                        titleAskQuestion.replaceWith(h3);
                     }
-                });
-            }
-        });
 
-        formObserver.observe(container, {
-            childList: true,
-            subtree: true,
-            attributes: true
-        });
-    }
+                    const nameInput = container.querySelector('#jdgm_question_reviewer_name:not([autocomplete])');
+                    if(nameInput) {
+                        nameInput.setAttribute('autocomplete', 'name')
+                        // nameInput.setAttribute('aria-required', 'true')
+                    }
 
-    function fixAskQuestionForm(container) {
-        const formObserver = new MutationObserver(() => {
-            const formWrapper = container.querySelector('.jdgm-question-form-wrapper');
-            if (formWrapper && formWrapper.style.display !== 'none') {
-                const titleAskQuestion = container.querySelector('.jdgm-question-form-wrapper div.jdgm-form__title');
-                if (titleAskQuestion) {
-                    const h3 = document.createElement('h3');
-                    h3.innerText = titleAskQuestion.innerText;
-                    h3.className = titleAskQuestion.className;
-                    titleAskQuestion.replaceWith(h3);
+                    const emailInput = container.querySelector('#jdgm_question_reviewer_email:not([autocomplete])');
+                    if(emailInput) {
+                        emailInput.setAttribute('autocomplete', 'email')
+                        // emailInput.setAttribute('aria-required', 'true')
+                    }
+                    const formContainer = container.querySelector('.jdgm-question-form:not([applied])')
+                    if(formContainer) {
+                        formContainer.querySelectorAll('label').forEach(label => {
+                            label.innerText = label.innerText + '*'
+                        });
+                        // const questionTextArea = container.querySelector('#jdgm_question_content');
+                        // if(questionTextArea) {
+                        //     questionTextArea.setAttribute('aria-required', 'true')
+                        // }
+                        formContainer.setAttribute('applied', 'true');
+                    }
                 }
+            });
 
-                const nameInput = container.querySelector('#jdgm_question_reviewer_name:not([autocomplete])');
-                if (nameInput) {
-                    nameInput.setAttribute('autocomplete', 'name')
-                    // nameInput.setAttribute('aria-required', 'true')
-                }
-
-                const emailInput = container.querySelector('#jdgm_question_reviewer_email:not([autocomplete])');
-                if (emailInput) {
-                    emailInput.setAttribute('autocomplete', 'email')
-                    // emailInput.setAttribute('aria-required', 'true')
-                }
-                const formContainer = container.querySelector('.jdgm-question-form:not([applied])')
-                if (formContainer) {
-                    formContainer.querySelectorAll('label').forEach(label => {
-                        label.innerText = label.innerText + '*'
-                    });
-                    // const questionTextArea = container.querySelector('#jdgm_question_content');
-                    // if(questionTextArea) {
-                    //     questionTextArea.setAttribute('aria-required', 'true')
-                    // }
-                    formContainer.setAttribute('applied', 'true');
-                }
-            }
-        });
-
-        formObserver.observe(container, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style']
-        });
-    }
+            formObserver.observe(container, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style']
+            });
+        } 
 
 
-    function fixEmailValidationMessage(container) {
-        const formObserver = new MutationObserver(() => {
-            const formWrapper = container.querySelector('.jdgm-form-wrapper');
-            if (formWrapper && formWrapper.style.display !== 'none') {
-                const form = formWrapper.querySelector('form:not([applied])');
-                if (form) {
-                    form.setAttribute('applied', 'true');
-                    form.querySelectorAll('input[name="reviewer_name"], input[name="reviewer_email"]').forEach(input => {
-                        const parent = input.parentNode;
+        function fixEmailValidationMessage(container) {
+            const formObserver = new MutationObserver(() => {
+                const formWrapper = container.querySelector('.jdgm-form-wrapper');
+                if (formWrapper && formWrapper.style.display !== 'none') {
+                    const form = formWrapper.querySelector('form:not([applied])');
+                    if(form) {
+                        form.setAttribute('applied', 'true');
+                        form.querySelectorAll('input[name="reviewer_name"], input[name="reviewer_email"]').forEach(input => {
+                            const parent = input.parentNode;
+                            const label = parent.querySelector('label');
+                            label.innerText = label.innerText+'*';
+
+                            if(input.getAttribute('name') === 'reviewer_name') {
+                                input.setAttribute('autocomplete', 'name');
+                                input.setAttribute('aria-required', 'true');
+                            } else {
+                                input.setAttribute('autocomplete', 'email');
+                                input.setAttribute('aria-required', 'true');
+                            }
+                        });
+                        const textarea = form.querySelector('textarea');
+                        textarea.setAttribute('aria-required', 'true');
+                        const parent = textarea.closest('.jdgm-form__body-fieldset');
                         const label = parent.querySelector('label');
                         label.innerText = label.innerText + '*';
 
-                        if (input.getAttribute('name') === 'reviewer_name') {
-                            input.setAttribute('autocomplete', 'name');
-                            input.setAttribute('aria-required', 'true');
-                        } else {
-                            input.setAttribute('autocomplete', 'email');
-                            input.setAttribute('aria-required', 'true');
+                        const stars = form.querySelector('.jdgm-form__rating-fieldset');
+                        const labelStars = stars.querySelector('label');
+                        labelStars.innerText = labelStars.innerText + '*';
+                        
+                        const fileInput = document.querySelector('input[type="file"]');
+                        if(fileInput) {
+                            fileInput.title = '';
                         }
-                    });
-                    const textarea = form.querySelector('textarea');
-                    textarea.setAttribute('aria-required', 'true');
-                    const parent = textarea.closest('.jdgm-form__body-fieldset');
-                    const label = parent.querySelector('label');
-                    label.innerText = label.innerText + '*';
 
-                    const stars = form.querySelector('.jdgm-form__rating-fieldset');
-                    const labelStars = stars.querySelector('label');
-                    labelStars.innerText = labelStars.innerText + '*';
+                        new MutationObserver(()=> {
+                            const deleteBtn = form.querySelector('.jdgm-picture-fieldset__delete');
+                            if(deleteBtn) {
+                                deleteBtn.setAttribute('aria-label', 'Remove media');
+                                deleteBtn.setAttribute('role', 'button');
+                                deleteBtn.setAttribute('tabindex', '0');
+                            }
+                        }).observe(form, {subtree: true, childList: true});
 
-                    const fileInput = document.querySelector('input[type="file"]');
-                    if (fileInput) {
-                        fileInput.title = '';
+                        makeStarsRadioGroup(form);
                     }
 
-                    new MutationObserver(() => {
-                        const deleteBtn = form.querySelector('.jdgm-picture-fieldset__delete');
-                        if (deleteBtn) {
-                            deleteBtn.setAttribute('aria-label', 'Remove media');
-                            deleteBtn.setAttribute('role', 'button');
-                            deleteBtn.setAttribute('tabindex', '0');
+                    const titleAskQuestion = formWrapper.querySelector('h2.jdgm-form__title');
+                    if (titleAskQuestion) {
+                        const h3 = document.createElement('h3');
+                        h3.innerText = titleAskQuestion.innerText;
+                        h3.className = titleAskQuestion.className;
+                        titleAskQuestion.replaceWith(h3);
+                    }
+
+                    const emailFieldset = formWrapper.querySelector('.jdgm-form__email-fieldset');
+                    if (!emailFieldset) return;
+
+                    if (emailFieldset.hasAttribute('data-email-error-fixed')) return;
+                    emailFieldset.setAttribute('data-email-error-fixed', 'true');
+
+                    const emailInput = emailFieldset.querySelector('input[type="email"]');
+                    if (!emailInput) return;
+
+                    const applyMessage = () => {
+                        const describedBy = emailInput.getAttribute('aria-describedby');
+                        let errorElement = null;
+
+                        if (describedBy) {
+                            errorElement = document.getElementById(describedBy);
                         }
-                    }).observe(form, { subtree: true, childList: true });
 
-                    makeStarsRadioGroup(form);
-                }
+                        if (!errorElement) {
+                            errorElement = emailFieldset.querySelector('.jdgm-input-error');
+                        }
 
-                const titleAskQuestion = formWrapper.querySelector('h2.jdgm-form__title');
-                if (titleAskQuestion) {
-                    const h3 = document.createElement('h3');
-                    h3.innerText = titleAskQuestion.innerText;
-                    h3.className = titleAskQuestion.className;
-                    titleAskQuestion.replaceWith(h3);
-                }
+                        if (errorElement && errorElement.textContent.trim() === 'Please enter a valid email address.') {
+                            errorElement.textContent = 'Please enter a valid email address in the format user@example.com';
+                        }
+                    };
 
-                const emailFieldset = formWrapper.querySelector('.jdgm-form__email-fieldset');
-                if (!emailFieldset) return;
-
-                if (emailFieldset.hasAttribute('data-email-error-fixed')) return;
-                emailFieldset.setAttribute('data-email-error-fixed', 'true');
-
-                const emailInput = emailFieldset.querySelector('input[type="email"]');
-                if (!emailInput) return;
-
-                const applyMessage = () => {
-                    const describedBy = emailInput.getAttribute('aria-describedby');
-                    let errorElement = null;
-
-                    if (describedBy) {
-                        errorElement = document.getElementById(describedBy);
-                    }
-
-                    if (!errorElement) {
-                        errorElement = emailFieldset.querySelector('.jdgm-input-error');
-                    }
-
-                    if (errorElement && errorElement.textContent.trim() === 'Please enter a valid email address.') {
-                        errorElement.textContent = 'Please enter a valid email address in the format user@example.com';
-                    }
-                };
-
-                applyMessage();
-
-                const observer = new MutationObserver(() => {
                     applyMessage();
-                });
 
-                observer.observe(emailFieldset, {
-                    childList: true,
-                    subtree: true,
-                    attributes: true,
-                    attributeFilter: ['class', 'aria-invalid', 'aria-describedby']
-                });
-            }
-        });
+                    const observer = new MutationObserver(() => {
+                        applyMessage();
+                    });
 
-        formObserver.observe(container, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style']
-        });
-    }
+                    observer.observe(emailFieldset, {
+                        childList: true,
+                        subtree: true,
+                        attributes: true,
+                        attributeFilter: ['class', 'aria-invalid', 'aria-describedby']
+                    });
+                }
+            });
 
-    function makeStarsRadioGroup(container) {
-        const stars = Array.from(container.querySelectorAll('.jdgm-star'));
-        const input = container.querySelector('input[name="score"]');
-
-        if (!stars.length) return;
-        container.setAttribute('role', 'radiogroup');
-
-        const parent = stars[0].parentNode;
-        if (parent) {
-            parent.className = parent.className + "2";
+            formObserver.observe(container, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style']
+            });
         }
 
-        // Init stars
-        stars.forEach((star, index) => {
-            star.setAttribute('role', 'radio');
-            star.setAttribute('tabindex', index === 0 ? '0' : '-1');
-            star.setAttribute('aria-checked', 'false');
-            star.removeAttribute('title');
+        function makeStarsRadioGroup(container) {
+            const stars = Array.from(container.querySelectorAll('.jdgm-star'));
+            const input = container.querySelector('input[name="score"]');
 
-            // Mouse
-            star.addEventListener('click', () => {
-                select(index, { focus: false });
-            });
-
-            // Keyboard
-            star.addEventListener('keydown', e => {
-                switch (e.key) {
-                    case 'Enter':
-                    case ' ':
-                        e.preventDefault();
-                        select(index);
-                        break;
-                    case 'ArrowRight':
-                        move(index + 1);
-                        break;
-                    case 'ArrowLeft':
-                        move(index - 1);
-                        break;
-                }
-            });
-        });
-
-        function select(i, { focus = true } = {}) {
-            if (i < 0 || i >= stars.length) return;
-
-            stars.forEach((star, idx) => {
-                const isOn = idx <= i;
-                const isSelected = idx === i;
-
-                star.classList.toggle('jdgm--on', isOn);
-                star.classList.toggle('jdgm--off', !isOn);
-                star.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-                star.tabIndex = isSelected ? 0 : -1;
-            });
-
-            if (focus) {
-                stars[i].focus();
-            }
+            if(!stars.length) return;
+            container.setAttribute('role', 'radiogroup');
 
             const parent = stars[0].parentNode;
-            if (parent) {
-                parent.querySelector('input').setAttribute('aria-invalid', parent.querySelectorAll('a.jdgm--on').length ? 'false' : 'true');
+            if(parent) {
+                parent.className = parent.className+"2";
             }
-            input.value = stars[i].dataset.alt;
-        }
 
-        function move(i) {
-            if (i < 0 || i >= stars.length) return;
+            // Init stars
+            stars.forEach((star, index) => {
+                star.setAttribute('role', 'radio');
+                star.setAttribute('tabindex', index === 0 ? '0' : '-1');
+                star.setAttribute('aria-checked', 'false');
+                star.removeAttribute('title');
 
-            stars.forEach(s => (s.tabIndex = -1));
-            stars[i].tabIndex = 0;
-            stars[i].focus();
-        }
-    }
+                // Mouse
+                star.addEventListener('click', () => {
+                    select(index, { focus: false });
+                });
 
-
-    function fixNotificationAlert(container) {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1 && node.classList.contains('jdgm-notification')) {
-                        const titleElement = node.querySelector('.jdgm-notification__title');
-                        if (titleElement && !titleElement.hasAttribute('data-alert-role-added')) {
-                            titleElement.setAttribute('role', 'alert');
-                            titleElement.setAttribute('data-alert-role-added', 'true');
-                        }
+                // Keyboard
+                star.addEventListener('keydown', e => {
+                    switch (e.key) {
+                        case 'Enter':
+                        case ' ':
+                            e.preventDefault();
+                            select(index);
+                            break;
+                        case 'ArrowRight':
+                            move(index + 1);
+                            break;
+                        case 'ArrowLeft':
+                            move(index - 1);
+                            break;
                     }
                 });
             });
-        });
 
-        observer.observe(container, {
-            childList: true,
-            subtree: true
-        });
-    }
+            function select(i, { focus = true } = {}) {
+                if (i < 0 || i >= stars.length) return;
 
-    function focusFirstErrorOnSubmit(container) {
-        const formObserver = new MutationObserver(() => {
-            const formWrapper = container.querySelector('.jdgm-form-wrapper');
-            if (formWrapper && formWrapper.style.display !== 'none') {
-                const form = formWrapper.querySelector('.jdgm-form');
-                if (!form || form.hasAttribute('data-focus-error-attached')) return;
+                stars.forEach((star, idx) => {
+                    const isOn = idx <= i;
+                    const isSelected = idx === i;
 
-                form.setAttribute('data-focus-error-attached', 'true');
-
-                form.addEventListener('submit', () => {
-                    setTimeout(() => {
-                        const errors = form.querySelectorAll('[aria-invalid="true"]');
-                        if (errors.length > 0) {
-                            const field = errors[0];
-                            //Changed the class for stars to stop listening to the library star update
-                            const fieldset = field.closest('.jdgm-form__rating2');
-                            if (fieldset) {
-                                fieldset.querySelector('input').setAttribute('aria-invalid', fieldset.querySelectorAll('a.jdgm--on').length ? 'false' : 'true');
-                                const firstStar = fieldset.querySelector('a');
-                                if (firstStar) {
-                                    firstStar.focus();
-                                }
-
-
-                            } else {
-                                field.focus();
-                            }
-
-                        }
-                    }, 150);
+                    star.classList.toggle('jdgm--on', isOn);
+                    star.classList.toggle('jdgm--off', !isOn);
+                    star.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+                    star.tabIndex = isSelected ? 0 : -1;
                 });
-            }
-        });
 
-        formObserver.observe(container, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style']
-        });
-    }
-
-    function fixQuestionsSection(container) {
-        const observer = new MutationObserver((mutations) => {
-            const questionsContainer = container.querySelector('.jdgm-quest-widg__body');
-            if (!questionsContainer) return;
-
-            questionsContainer.querySelectorAll('.jdgm-quest').forEach((item, index) => {
-                item.setAttribute('role', 'group');
-                const author = item.querySelector('.jdgm-rev__author');
-                if (author) {
-                    author.id = `quest_${index}`;
-                    item.setAttribute('aria-labelledby', author.id)
+                if (focus) {
+                    stars[i].focus();
                 }
+                
+                const parent = stars[0].parentNode;
+                if(parent) {
+                    parent.querySelector('input').setAttribute('aria-invalid', parent.querySelectorAll('a.jdgm--on').length ? 'false' : 'true');
+                }
+                input.value = stars[i].dataset.alt;
+            }
 
-                const profile = item.querySelector('.jdgm-rev__icon');
-                if (profile) {
-                    profile.setAttribute('aria-hidden', 'true');
+            function move(i) {
+                if (i < 0 || i >= stars.length) return;
+
+                stars.forEach(s => (s.tabIndex = -1));
+                stars[i].tabIndex = 0;
+                stars[i].focus();
+            }
+        }
+
+
+        function fixNotificationAlert(container) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1 && node.classList.contains('jdgm-notification')) {
+                            const titleElement = node.querySelector('.jdgm-notification__title');
+                            if (titleElement && !titleElement.hasAttribute('data-alert-role-added')) {
+                                titleElement.setAttribute('role', 'alert');
+                                titleElement.setAttribute('data-alert-role-added', 'true');
+                            }
+                        }
+                    });
+                });
+            });
+
+            observer.observe(container, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        function focusFirstErrorOnSubmit(container) {
+            const formObserver = new MutationObserver(() => {
+                const formWrapper = container.querySelector('.jdgm-form-wrapper');
+                if (formWrapper && formWrapper.style.display !== 'none') {
+                    const form = formWrapper.querySelector('.jdgm-form');
+                    if (!form || form.hasAttribute('data-focus-error-attached')) return;
+
+                    form.setAttribute('data-focus-error-attached', 'true');
+
+                    form.addEventListener('submit', () => {
+                        setTimeout(() => {
+                            const errors = form.querySelectorAll('[aria-invalid="true"]');
+                            if (errors.length > 0) {
+                                const field = errors[0];
+                                //Changed the class for stars to stop listening to the library star update
+                                const fieldset = field.closest('.jdgm-form__rating2');
+                                if(fieldset) {
+                                    fieldset.querySelector('input').setAttribute('aria-invalid', fieldset.querySelectorAll('a.jdgm--on').length ? 'false' : 'true');
+                                    const firstStar = fieldset.querySelector('a');
+                                    if(firstStar) {
+                                        firstStar.focus();
+                                    }
+                                    
+                                    
+                                } else {
+                                    field.focus();
+                                }
+                                
+                            }
+                        }, 150);
+                    });
                 }
             });
-        });
 
-        observer.observe(container, {
-            childList: true,
-            subtree: true
-        });
+            formObserver.observe(container, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style']
+            });
+        }
+
+        function fixQuestionsSection(container) {
+            const observer = new MutationObserver((mutations) => {
+                const questionsContainer = container.querySelector('.jdgm-quest-widg__body');
+                if(!questionsContainer) return;
+
+                questionsContainer.querySelectorAll('.jdgm-quest').forEach((item, index) => {
+                    item.setAttribute('role', 'group');
+                    const author = item.querySelector('.jdgm-rev__author');
+                    if(author) {
+                        author.id = `quest_${index}`;
+                        item.setAttribute('aria-labelledby', author.id)
+                    }
+
+                    const profile = item.querySelector('.jdgm-rev__icon');
+                    if(profile) {
+                        profile.setAttribute('aria-hidden', 'true');
+                    }
+                });
+            });
+
+            observer.observe(container, {
+                childList: true,
+                subtree: true
+            });
+        }
+
     }
-
-}
 
 fixReviews();
 
